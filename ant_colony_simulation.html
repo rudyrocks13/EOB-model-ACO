@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ant Colony Optimization — Shortest Path Simulation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --soil-950:#120e0a;
+    --soil-900:#1b140e;
+    --soil-800:#241b13;
+    --soil-700:#332619;
+    --clay-line:#4a3c2c;
+    --amber:#f2a33c;
+    --amber-dim:#7a5a28;
+    --leaf:#8bab5c;
+    --cream:#f3ead9;
+    --cream-dim:#a99a83;
+    --mound:#a1703f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:radial-gradient(circle at 50% -10%, #241b13 0%, var(--soil-950) 55%);
+    color:var(--cream);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding:28px 16px 60px;
+    display:flex;
+    justify-content:center;
+  }
+  .wrap{width:100%;max-width:760px;}
+  header{margin-bottom:20px;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin:0 0 8px;
+  }
+  h1{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:clamp(26px,5.5vw,36px);
+    line-height:1.1;
+    margin:0 0 10px;
+    color:var(--cream);
+  }
+  header p{
+    font-size:14.5px;
+    line-height:1.55;
+    color:var(--cream-dim);
+    margin:0;
+    max-width:56ch;
+  }
+  .card{
+    background:linear-gradient(180deg,var(--soil-800),var(--soil-900));
+    border:1px solid var(--soil-700);
+    border-radius:16px;
+    padding:14px;
+    margin-top:22px;
+  }
+  canvas{
+    display:block;
+    width:100%;
+    height:auto;
+    border-radius:10px;
+  }
+  .controls{
+    margin-top:16px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:14px 22px;
+    align-items:flex-end;
+  }
+  .btn-row{display:flex;gap:8px;}
+  button{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    border:1px solid var(--soil-700);
+    background:var(--soil-700);
+    color:var(--cream);
+    padding:9px 16px;
+    border-radius:8px;
+    cursor:pointer;
+    transition:background .15s ease, transform .1s ease;
+  }
+  button:hover{background:#40301f;}
+  button:active{transform:scale(.97);}
+  button.primary{
+    background:var(--amber);
+    color:#241b0c;
+    border-color:var(--amber);
+  }
+  button.primary:hover{background:#ffb955;}
+  .slider-group{
+    display:flex;
+    flex-direction:column;
+    gap:5px;
+    min-width:130px;
+  }
+  .slider-group label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--cream-dim);
+    display:flex;
+    justify-content:space-between;
+  }
+  .slider-group label span{color:var(--amber);}
+  input[type=range]{
+    -webkit-appearance:none;
+    width:100%;
+    height:4px;
+    border-radius:2px;
+    background:var(--soil-700);
+    outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    width:14px;height:14px;
+    border-radius:50%;
+    background:var(--amber);
+    cursor:pointer;
+    border:2px solid var(--soil-950);
+  }
+  input[type=range]::-moz-range-thumb{
+    width:14px;height:14px;border-radius:50%;
+    background:var(--amber);cursor:pointer;border:2px solid var(--soil-950);
+  }
+  .stats{
+    margin-top:16px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  .stat{
+    background:var(--soil-800);
+    border:1px solid var(--soil-700);
+    border-radius:12px;
+    padding:12px 14px;
+  }
+  .stat .label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--cream-dim);
+    display:flex;
+    justify-content:space-between;
+  }
+  .stat .pct{
+    font-family:'JetBrains Mono',monospace;
+    font-weight:700;
+    font-size:26px;
+    margin:4px 0 8px;
+  }
+  .stat.short .pct{color:var(--amber);}
+  .stat.long .pct{color:#8a7c69;}
+  .bar-track{height:6px;border-radius:3px;background:var(--soil-700);overflow:hidden;}
+  .bar-fill{height:100%;border-radius:3px;}
+  .stat.short .bar-fill{background:var(--amber);}
+  .stat.long .bar-fill{background:#8a7c69;}
+  .footline{
+    margin-top:14px;
+    display:flex;
+    justify-content:space-between;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    color:var(--cream-dim);
+  }
+  .footline span{color:var(--amber);}
+  @media (max-width:480px){
+    .controls{gap:12px;}
+    .slider-group{min-width:100px;flex:1 1 40%;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Model · Bio-Inspired Algorithms</p>
+    <h1>How ants find the shortest path</h1>
+    <p>Every ant lays pheromone as it walks and picks its route by scent strength. Pheromone fades over time. Ants on the shorter branch finish their lap sooner, so their trail is refreshed more often — the trail wins not because ants "decide" it's shorter, but because it never gets the chance to fade.</p>
+  </header>
+
+  <div class="card">
+    <canvas id="sim" width="900" height="280"></canvas>
+
+    <div class="controls">
+      <div class="btn-row">
+        <button class="primary" id="toggleBtn">Pause</button>
+        <button id="resetBtn">Reset</button>
+      </div>
+      <div class="slider-group">
+        <label>Ants <span id="antsVal">24</span></label>
+        <input type="range" id="antsSlider" min="4" max="48" value="24">
+      </div>
+      <div class="slider-group">
+        <label>Evaporation <span id="evapVal">0.25</span></label>
+        <input type="range" id="evapSlider" min="2" max="80" value="25">
+      </div>
+      <div class="slider-group">
+        <label>Speed <span id="speedVal">1.0×</span></label>
+        <input type="range" id="speedSlider" min="30" max="300" value="100">
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat short">
+        <div class="label"><span>Short path</span><span id="lenA">–</span></div>
+        <div class="pct" id="pctA">50%</div>
+        <div class="bar-track"><div class="bar-fill" id="barA" style="width:50%"></div></div>
+      </div>
+      <div class="stat long">
+        <div class="label"><span>Long path</span><span id="lenB">–</span></div>
+        <div class="pct" id="pctB">50%</div>
+        <div class="bar-track"><div class="bar-fill" id="barB" style="width:50%"></div></div>
+      </div>
+    </div>
+
+    <div class="footline">
+      <span id="laps">0</span> laps completed
+      <span>ants that just finished a lap are the ones voting right now</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const canvas = document.getElementById('sim');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // ---- geometry ----
+  const nest  = {x:70,  y:190};
+  const split = {x:230, y:190};
+  const merge = {x:670, y:190};
+  const food  = {x:830, y:190};
+  const ctrl  = {x:450, y:48}; // bulge for the long branch
+
+  function dist(a,b){ return Math.hypot(b.x-a.x, b.y-a.y); }
+  function lerpPt(a,b,t){ return {x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t}; }
+  function quadPt(a,c,b,t){
+    const mt = 1-t;
+    return {
+      x: mt*mt*a.x + 2*mt*t*c.x + t*t*b.x,
+      y: mt*mt*a.y + 2*mt*t*c.y + t*t*b.y
+    };
+  }
+  function quadLen(a,c,b,steps){
+    let len=0, prev=a;
+    for(let i=1;i<=steps;i++){
+      const t=i/steps, p=quadPt(a,c,b,t);
+      len += dist(prev,p); prev=p;
+    }
+    return len;
+  }
+
+  const lenIn  = dist(nest, split);
+  const lenOut = dist(merge, food);
+  const lenA   = dist(split, merge);
+  const lenB   = quadLen(split, ctrl, merge, 60);
+
+  document.getElementById('lenA').textContent = Math.round(lenA)+' px';
+  document.getElementById('lenB').textContent = Math.round(lenB)+' px';
+
+  // ---- pheromone state ----
+  let pherA = 1, pherB = 1;
+  const FLOOR = 0.15;
+  const DEPOSIT = 1;
+  const EXP = 2;
+  let evapRate = 0.25;
+  let laps = 0;
+
+  function chooseBranch(){
+    const hA = Math.pow(pherA, EXP), hB = Math.pow(pherB, EXP);
+    return Math.random() < hA/(hA+hB) ? 'A' : 'B';
+  }
+  function depositOn(branch){
+    if(branch==='A') pherA += DEPOSIT; else pherB += DEPOSIT;
+  }
+
+  // ---- ants ----
+  let ants = [];
+  let baseSpeed = 100; // px/sec
+  function makeAnt(delayMs){
+    return { phase:'nestToSplit', branch:null, t:0, wait:delayMs };
+  }
+  function buildAnts(n){
+    ants = [];
+    for(let i=0;i<n;i++) ants.push(makeAnt(i*260));
+  }
+  buildAnts(24);
+
+  function segLength(ant){
+    switch(ant.phase){
+      case 'nestToSplit': case 'splitToNest': return lenIn;
+      case 'mergeToFood': case 'foodToMerge': return lenOut;
+      case 'branch': case 'branchBack': return ant.branch==='A' ? lenA : lenB;
+    }
+  }
+
+  function posOf(ant){
+    switch(ant.phase){
+      case 'nestToSplit': return lerpPt(nest, split, ant.t);
+      case 'splitToNest': return lerpPt(split, nest, ant.t);
+      case 'mergeToFood': return lerpPt(merge, food, ant.t);
+      case 'foodToMerge': return lerpPt(food, merge, ant.t);
+      case 'branch':
+        return ant.branch==='A' ? lerpPt(split, merge, ant.t) : quadPt(split, ctrl, merge, ant.t);
+      case 'branchBack':
+        return ant.branch==='A' ? lerpPt(merge, split, ant.t) : quadPt(merge, ctrl, split, ant.t);
+    }
+  }
+
+  function advancePhase(ant){
+    switch(ant.phase){
+      case 'nestToSplit':
+        ant.phase='branch'; ant.branch=chooseBranch(); ant.t=0; break;
+      case 'branch':
+        depositOn(ant.branch); ant.phase='mergeToFood'; ant.t=0; break;
+      case 'mergeToFood':
+        ant.phase='foodToMerge'; ant.t=0; break;
+      case 'foodToMerge':
+        ant.phase='branchBack'; ant.branch=chooseBranch(); ant.t=0; break;
+      case 'branchBack':
+        depositOn(ant.branch); ant.phase='splitToNest'; ant.t=0; break;
+      case 'splitToNest':
+        ant.phase='nestToSplit'; ant.t=0; laps++; break;
+    }
+  }
+
+  // ---- sim loop ----
+  let running = true;
+  let last = performance.now();
+
+  function update(dt){
+    const total = pherA+pherB;
+    pherA = Math.max(FLOOR, pherA*(1-evapRate*dt));
+    pherB = Math.max(FLOOR, pherB*(1-evapRate*dt));
+
+    for(const ant of ants){
+      if(ant.wait>0){ ant.wait -= dt*1000; continue; }
+      const segLen = segLength(ant);
+      ant.t += (baseSpeed*dt)/segLen;
+      if(ant.t>=1){ ant.t=1; advancePhase(ant); }
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    // approach segments (neutral)
+    ctx.strokeStyle = 'rgba(169,154,131,0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(nest.x,nest.y); ctx.lineTo(split.x,split.y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(merge.x,merge.y); ctx.lineTo(food.x,food.y); ctx.stroke();
+
+    // branches, width/alpha driven by relative pheromone
+    const total = pherA+pherB;
+    const rA = pherA/total, rB = pherB/total;
+    const wA = 3 + rA*16, wB = 3 + rB*16;
+    const aA = 0.3 + rA*0.7, aB = 0.3 + rB*0.7;
+
+    ctx.strokeStyle = `rgba(242,163,60,${aA})`;
+    ctx.lineWidth = wA;
+    ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(split.x,split.y); ctx.lineTo(merge.x,merge.y); ctx.stroke();
+
+    ctx.strokeStyle = `rgba(242,163,60,${aB})`;
+    ctx.lineWidth = wB;
+    ctx.beginPath();
+    ctx.moveTo(split.x,split.y);
+    ctx.quadraticCurveTo(ctrl.x,ctrl.y,merge.x,merge.y);
+    ctx.stroke();
+
+    // labels
+    ctx.font = "600 11px 'JetBrains Mono', monospace";
+    ctx.fillStyle = 'rgba(243,234,217,0.55)';
+    ctx.textAlign = 'center';
+    ctx.fillText('SHORT PATH', (split.x+merge.x)/2, split.y+22);
+    ctx.fillText('LONG PATH', (split.x+merge.x)/2, ctrl.y-10);
+
+    // nest
+    ctx.beginPath(); ctx.arc(nest.x,nest.y,14,0,7); ctx.fillStyle='#a1703f'; ctx.fill();
+    ctx.beginPath(); ctx.arc(nest.x,nest.y,14,0,7); ctx.strokeStyle='#5c3f22'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='rgba(243,234,217,0.6)'; ctx.font="600 10px 'JetBrains Mono', monospace";
+    ctx.fillText('NEST', nest.x, nest.y+32);
+
+    // food
+    ctx.beginPath(); ctx.arc(food.x,food.y,12,0,7); ctx.fillStyle='#8bab5c'; ctx.fill();
+    ctx.beginPath(); ctx.arc(food.x,food.y,12,0,7); ctx.strokeStyle='#4f6636'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillText('FOOD', food.x, food.y+32);
+
+    // ants
+    for(const ant of ants){
+      if(ant.wait>0) continue;
+      const p = posOf(ant);
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,3.4,0,7);
+      ctx.fillStyle = '#f3ead9';
+      ctx.fill();
+    }
+  }
+
+  function updateStatsDOM(){
+    const total = pherA+pherB;
+    const pA = Math.round(pherA/total*100);
+    const pB = 100-pA;
+    document.getElementById('pctA').textContent = pA+'%';
+    document.getElementById('pctB').textContent = pB+'%';
+    document.getElementById('barA').style.width = pA+'%';
+    document.getElementById('barB').style.width = pB+'%';
+    document.getElementById('laps').textContent = laps;
+  }
+
+  function frame(now){
+    const dt = Math.min(0.05, (now-last)/1000);
+    last = now;
+    if(running) update(dt);
+    draw();
+    updateStatsDOM();
+    requestAnimationFrame(frame);
+  }
+
+  // ---- controls ----
+  const toggleBtn = document.getElementById('toggleBtn');
+  toggleBtn.addEventListener('click', ()=>{
+    running = !running;
+    toggleBtn.textContent = running ? 'Pause' : 'Start';
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    pherA = 1; pherB = 1; laps = 0;
+    buildAnts(parseInt(antsSlider.value,10));
+  });
+
+  const antsSlider = document.getElementById('antsSlider');
+  const antsVal = document.getElementById('antsVal');
+  antsSlider.addEventListener('input', ()=>{
+    const n = parseInt(antsSlider.value,10);
+    antsVal.textContent = n;
+    if(n > ants.length){
+      for(let i=ants.length;i<n;i++) ants.push(makeAnt(200));
+    } else {
+      ants.length = n;
+    }
+  });
+
+  const evapSlider = document.getElementById('evapSlider');
+  const evapVal = document.getElementById('evapVal');
+  evapSlider.addEventListener('input', ()=>{
+    evapRate = parseInt(evapSlider.value,10)/100;
+    evapVal.textContent = evapRate.toFixed(2);
+  });
+
+  const speedSlider = document.getElementById('speedSlider');
+  const speedVal = document.getElementById('speedVal');
+  speedSlider.addEventListener('input', ()=>{
+    baseSpeed = parseInt(speedSlider.value,10);
+    speedVal.textContent = (baseSpeed/100).toFixed(1)+'×';
+  });
+
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    running = false;
+    toggleBtn.textContent = 'Start';
+  }
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
